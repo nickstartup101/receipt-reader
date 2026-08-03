@@ -1,5 +1,5 @@
 const nodeFs = require("node:fs");
-const formidable = require("formidable");
+const { formidable } = require("formidable");
 const { analyzeReceiptImage } = require("../lib/gemini");
 const db = require("../lib/db");
 
