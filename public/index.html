@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>ອ່ານໃບບິນ · Receipt Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Lao:wght@400;500;600;700&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">🧾</span>
+      <div class="brand-text">
+        <span class="brand-title">ອ່ານໃບບິນ</span>
+        <span class="brand-sub">Receipt · Bill · Invoice · Quotation Reader</span>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-view="scan">ວິເຄາະໃບບິນ</button>
+      <button class="tab-btn" data-view="products">ຄັງສິນຄ້າທີ່ຈື່ໄວ້</button>
+      <button class="tab-btn" data-view="history">ປະຫວັດ</button>
+    </nav>
+  </div>
+</header>
+
+<main class="app-main">
+
+  <!-- ============ SCAN VIEW ============ -->
+  <section id="view-scan" class="view active">
+    <div class="grid-2">
+
+      <div class="panel">
+        <h2 class="panel-title">1. ອັບໂຫລດ ຫຼື ລາກຮູບໃບບິນ</h2>
+        <div id="dropzone" class="dropzone">
+          <input type="file" id="fileInput" accept="image/*" capture="environment" hidden />
+          <div id="dropzoneEmpty" class="dropzone-empty">
+            <div class="dropzone-icon">⬆</div>
+            <p class="dropzone-text">ລາກ-ວາງຮູບໃສ່ບ່ອນນີ້ ຫຼື ກົດເພື່ອເລືອກຮູບ</p>
+            <p class="dropzone-hint">ຮອງຮັບ POS bill, ບິນຂຽນມື, invoice, quotation · JPG / PNG</p>
+          </div>
+          <img id="previewImg" class="preview-img" hidden />
+        </div>
+        <div class="dropzone-actions">
+          <button id="btnChangeImage" class="btn btn-ghost" hidden>ປ່ຽນຮູບ</button>
+          <button id="btnAnalyze" class="btn btn-primary" disabled>ວິເຄາະດ້ວຍລະບົບ (Analyze)</button>
+        </div>
+        <div id="analyzeStatus" class="status-line" hidden></div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">2. ຜົນການວິເຄາະ</h2>
+        <div id="resultsEmpty" class="empty-state">
+          <p>ອັບໂຫລດຮູບໃບບິນແລ້ວກົດ "ວິເຄາະດ້ວຍລະບົບ" ຜົນຈະສະແດງຢູ່ບ່ອນນີ້</p>
+        </div>
+        <div id="resultsContent" hidden>
+
+          <div id="uncertainBanner" class="uncertain-banner" hidden>
+            <strong>⚠ ມີຂໍ້ມູນທີ່ລະບົບບໍ່ແນ່ໃຈ, ກະລຸນາກວດ/ຕື່ມຂໍ້ມູນ:</strong>
+            <ul id="uncertainList"></ul>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span class="field-label">ຮ້ານ / ຜູ້ອອກບິນ</span>
+              <input type="text" id="fStoreName" placeholder="ບໍ່ຮູ້ - ກະລຸນາໃສ່ເອງ" />
+            </label>
+            <label class="field">
+              <span class="field-label">ວັນທີ</span>
+              <input type="text" id="fDate" placeholder="ບໍ່ຮູ້ - ກະລຸນາໃສ່ເອງ" />
+            </label>
+            <label class="field">
+              <span class="field-label">ເວລາ</span>
+              <input type="text" id="fTime" placeholder="ບໍ່ຮູ້ - ກະລຸນາໃສ່ເອງ" />
+            </label>
+            <label class="field">
+              <span class="field-label">ສະກຸນເງິນ</span>
+              <input type="text" id="fCurrency" placeholder="ເຊັ່ນ LAK, THB, USD" />
+            </label>
+          </div>
+
+          <h3 class="items-title">ລາຍການສິນຄ້າ</h3>
+          <div class="items-table-wrap">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>ຂໍ້ຄວາມໃນບິນ</th>
+                  <th>ຊື່ສິນຄ້າ (ຫຼັງຈັບຄູ່)</th>
+                  <th>ຈຳນວນ</th>
+                  <th>ລາຄາ/ໜ່ວຍ</th>
+                  <th>ລວມ</th>
+                </tr>
+              </thead>
+              <tbody id="itemsBody"></tbody>
+            </table>
+          </div>
+
+          <div class="grand-total-row">
+            <span>ລາຄາລວມທັງໝົດ</span>
+            <input type="number" id="fGrandTotal" step="0.01" />
+          </div>
+
+          <div class="save-row">
+            <button id="btnSave" class="btn btn-primary btn-wide">💾 ບັນທຶກໃບບິນນີ້</button>
+            <span id="saveStatus" class="status-line"></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ PRODUCTS VIEW ============ -->
+  <section id="view-products" class="view">
+    <div class="panel">
+      <h2 class="panel-title">ຄັງສິນຄ້າທີ່ລະບົບຈື່ໄວ້ (ແບ່ງປັນຮ່ວມກັນທຸກເຄື່ອງ)</h2>
+      <p class="panel-desc">ທຸກຄັ້ງທີ່ທ່ານຢືນຢັນສິນຄ້າໃນໜ້າວິເຄາະ, ຊື່ນັ້ນຈະຖືກເພີ່ມເປັນ "ຊື່ທີ່ຮູ້ຈັກ" ຂອງສິນຄ້າຢູ່ບ່ອນນີ້ ຄັ້ງຕໍ່ໄປລະບົບຈະຈື່ໄດ້ອັດຕະໂນມັດ.</p>
+      <div id="productsList" class="products-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY VIEW ============ -->
+  <section id="view-history" class="view">
+    <div class="panel">
+      <h2 class="panel-title">ປະຫວັດໃບບິນທີ່ບັນທຶກໄວ້</h2>
+      <div id="historyList" class="history-list"></div>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

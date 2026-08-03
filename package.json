@@ -1,0 +1,10 @@
+{
+  "name": "receipt-reader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Receipt/invoice/bill OCR reader with Gemini + shared auto-learning product memory, deployed on Vercel",
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "formidable": "^3.5.1"
+  }
+}
