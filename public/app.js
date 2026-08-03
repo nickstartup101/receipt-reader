@@ -106,10 +106,16 @@ function compressImage(file, maxDim = 1600, quality = 0.75) {
   });
 }
 
+// ---------------- setFile (ແກ້ໄຂລວມ Console Log ແລ້ວ) ----------------
 async function setFile(file) {
   setStatus(analyzeStatus, "⏳ ກຳລັງກຽມຮູບ...", "");
   try {
+    console.log("📏 ຂະໜາດຮູບຕົ້ນສະບັບ:", (file.size / 1024 / 1024).toFixed(2), "MB");
+    
+    // ບີບອັດຮູບ
     currentFile = await compressImage(file);
+    
+    console.log("📉 ຂະໜາດຫຼັງບີບອັດ:", (currentFile.size / 1024 / 1024).toFixed(2), "MB");
   } catch (err) {
     console.warn("compress failed, using original file", err);
     currentFile = file;
@@ -187,7 +193,7 @@ function renderResults(data) {
 
   if (fStoreName) fStoreName.value = data.store_name || "";
   
-  // 🔥 ແກ້ໄຂ: ແປງ Format Date ແລະ Time ກ່ອນSet ຄ່າ ເພື່ອປ້ອງກັນ Error DOMException
+  // ແປງ Format Date ແລະ Time ກ່ອນSet ຄ່າ ເພື່ອປ້ອງກັນ Error DOMException
   if (fDate) fDate.value = formatDateForInput(data.date);
   if (fTime) fTime.value = formatTimeForInput(data.time);
   
@@ -466,19 +472,4 @@ function escapeHtml(str) {
 }
 function escapeAttr(str) {
   return String(str).replace(/"/g, "&quot;");
-}
-async function setFile(file) {
-  setStatus(analyzeStatus, "⏳ ກຳລັງກຽມຮູບ...", "");
-  try {
-    console.log("📏 ຂະໜາດຮູບຕົ້ນສະບັບ:", (file.size / 1024 / 1024).toFixed(2), "MB");
-    
-    // ບີບອັດຮູບ
-    currentFile = await compressImage(file);
-    
-    console.log("📉 ຂະໜາດຫຼັງບີບອັດ:", (currentFile.size / 1024 / 1024).toFixed(2), "MB");
-  } catch (err) {
-    console.warn("compress failed, using original file", err);
-    currentFile = file;
-  }
-  // ... (ໂຄດສ່ວນທີ່ເຫຼືອຄືເກົ່າ)
 }
