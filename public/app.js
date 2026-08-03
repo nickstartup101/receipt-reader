@@ -9,6 +9,35 @@ let itemState = [];
 const AUTO_CONFIRM_SCORE = 0.9; // near-exact match => remember automatically, no click needed
 const SHOW_SUGGESTION_SCORE = 0.45; // below this, don't bother suggesting
 
+// ---------------- Helper Functions ສຳລັບ Date/Time Input ----------------
+// ແກ້ໄຂ Error: "The string did not match the expected pattern"
+function formatDateForInput(dateStr) {
+  if (!dateStr) return "";
+  const cleaned = String(dateStr).replace(/\//g, "-").trim();
+  const parts = cleaned.split("-");
+  
+  if (parts.length === 3) {
+    // ຖ້າເປັນ DD-MM-YYYY (ເຊັ່ນ 25-10-2023) -> ແປງເປັນ YYYY-MM-DD
+    if (parts[0].length <= 2 && parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    // ຖ້າເປັນ YYYY-MM-DD ຢູ່ແລ້ວ
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  return ""; // ຖ້າ Format ບໍ່ຖືກຕ້ອງໃຫ້ເປັນຄ່າຫວ່າງ ເພື່ອປ້ອງກັນ Browser Crash
+}
+
+function formatTimeForInput(timeStr) {
+  if (!timeStr) return "";
+  const match = String(timeStr).match(/(\d{1,2}):(\d{2})/);
+  if (match) {
+    return `${match[1].padStart(2, '0')}:${match[2]}`;
+  }
+  return ""; // ຖ້າ Format ບໍ່ຖືກຕ້ອງໃຫ້ເປັນຄ່າຫວ່າງ
+}
+
 // ---------------- tabs ----------------
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -43,9 +72,7 @@ fileInput.addEventListener("change", () => {
 });
 btnChangeImage.addEventListener("click", (e) => { e.stopPropagation(); fileInput.click(); });
 
-// Resize/compress in the browser before upload — keeps requests well under the
-// hosting platform's payload limit (e.g. Vercel Serverless Functions cap requests at 4.5MB)
-// and makes analysis faster on mobile networks / iPad camera photos.
+// Resize/compress in the browser before upload
 function compressImage(file, maxDim = 1600, quality = 0.75) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -145,22 +172,31 @@ const uncertainList = document.getElementById("uncertainList");
 const itemsBody = document.getElementById("itemsBody");
 
 function markField(input, isMissing) {
-  input.classList.toggle("needs-input", !!isMissing);
+  if (input) input.classList.toggle("needs-input", !!isMissing);
 }
 
 function renderResults(data) {
   resultsEmpty.hidden = true;
   resultsContent.hidden = false;
 
-  document.getElementById("fStoreName").value = data.store_name || "";
-  document.getElementById("fDate").value = data.date || "";
-  document.getElementById("fTime").value = data.time || "";
-  document.getElementById("fCurrency").value = data.currency || "";
-  document.getElementById("fGrandTotal").value = data.grand_total ?? "";
+  const fStoreName = document.getElementById("fStoreName");
+  const fDate = document.getElementById("fDate");
+  const fTime = document.getElementById("fTime");
+  const fCurrency = document.getElementById("fCurrency");
+  const fGrandTotal = document.getElementById("fGrandTotal");
 
-  markField(document.getElementById("fStoreName"), !data.store_name);
-  markField(document.getElementById("fDate"), !data.date);
-  markField(document.getElementById("fTime"), !data.time);
+  if (fStoreName) fStoreName.value = data.store_name || "";
+  
+  // 🔥 ແກ້ໄຂ: ແປງ Format Date ແລະ Time ກ່ອນSet ຄ່າ ເພື່ອປ້ອງກັນ Error DOMException
+  if (fDate) fDate.value = formatDateForInput(data.date);
+  if (fTime) fTime.value = formatTimeForInput(data.time);
+  
+  if (fCurrency) fCurrency.value = data.currency || "";
+  if (fGrandTotal) fGrandTotal.value = data.grand_total ?? "";
+
+  markField(fStoreName, !data.store_name);
+  markField(fDate, !fDate.value);
+  markField(fTime, !fTime.value);
 
   if (data.uncertain_fields && data.uncertain_fields.length) {
     uncertainBanner.hidden = false;
@@ -261,7 +297,6 @@ function renderMatchArea(idx, suggestions) {
 }
 
 async function onNameChanged(idx) {
-  // "ຫຼັງຈາກ user ປ່ຽນຊື່ແລ້ວ" -> re-check against known products for comparison
   const nameInput = document.getElementById(`item-name-${idx}`);
   const text = nameInput.value.trim();
   itemState[idx].matched_name = text;
@@ -321,7 +356,6 @@ document.getElementById("btnSave").addEventListener("click", async () => {
   const saveStatus = document.getElementById("saveStatus");
   setStatus(saveStatus, "⏳ ກຳລັງບັນທຶກ...", "");
 
-  // auto-create product for any item the user never confirmed, so save always works
   for (let idx = 0; idx < itemState.length; idx++) {
     if (!itemState[idx].product_id) {
       const nameInput = document.getElementById(`item-name-${idx}`);
