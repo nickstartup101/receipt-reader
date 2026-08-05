@@ -135,41 +135,69 @@ function setStatus(el, msg, type) {
   el.className = "status-line" + (type ? " " + type : "");
 }
 
-// ---------------- analyze ----------------
-btnAnalyze.addEventListener("click", async () => {
-  if (!currentFile) return;
-  btnAnalyze.disabled = true;
-  setStatus(analyzeStatus, "⏳ ກຳລັງວິເຄາະຮູບດ້ວຍ Gemini... ອາດໃຊ້ເວລາຫຼາຍວິນາທີ", "");
+// ---------------- analyze (ສົ່ງຮູບແບບ Base64 JSON) ----------------
+if (btnAnalyze) {
+  btnAnalyze.addEventListener("click", async () => {
+    if (!currentFile) return;
+    btnAnalyze.disabled = true;
+    setStatus(analyzeStatus, "⏳ ກຳລັງວິເຄາະຮູບດ້ວຍ Gemini... ອາດໃຊ້ເວລາຫຼາຍວິນາທີ", "");
 
-  try {
-    const formData = new FormData();
-    formData.append("image", currentFile);
-    const res = await fetch(`${API_BASE}/api/analyze`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "ວິເຄາະບໍ່ສຳເລັດ");
+    try {
+      // ແປງໄຟລ໌ຮູບເປັນ Base64 String
+      const reader = new FileReader();
+      reader.readAsDataURL(currentFile);
+      
+      reader.onload = async () => {
+        try {
+          const base64String = reader.result.split(',')[1];
+          const mimeType = currentFile.type || "image/jpeg";
 
-    currentResult = data;
-    itemState = (data.items || []).map((item) => {
-      const best = (item.suggestions || [])[0];
-      const autoConfirm = best && best.score >= AUTO_CONFIRM_SCORE;
-      return {
-        product_id: autoConfirm ? best.product_id : null,
-        matched_name: autoConfirm ? best.canonical_name : (item.name || ""),
-        confirmed: !!autoConfirm,
-        isNew: false,
+          const res = await fetch(`${API_BASE}/api/analyze`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              image: base64String,
+              mimeType: mimeType,
+              imageName: currentFile.name || "receipt.jpg"
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "ວິເຄາະບໍ່ສຳເລັດ");
+
+          currentResult = data;
+          itemState = (data.items || []).map((item) => {
+            const best = (item.suggestions || [])[0];
+            const autoConfirm = best && best.score >= AUTO_CONFIRM_SCORE;
+            return {
+              product_id: autoConfirm ? best.product_id : null,
+              matched_name: autoConfirm ? best.canonical_name : (item.name || ""),
+              confirmed: !!autoConfirm,
+              isNew: false,
+            };
+          });
+
+          renderResults(data);
+          setStatus(analyzeStatus, "✅ ວິເຄາະສຳເລັດ", "success");
+        } catch (err) {
+          console.error(err);
+          setStatus(analyzeStatus, "❌ " + err.message, "error");
+        } finally {
+          btnAnalyze.disabled = false;
+        }
       };
-    });
 
-    renderResults(data);
-    setStatus(analyzeStatus, "✅ ວິເຄາະສຳເລັດ", "success");
-  } catch (err) {
-    console.error(err);
-    setStatus(analyzeStatus, "❌ " + err.message, "error");
-  } finally {
-    btnAnalyze.disabled = false;
-  }
-});
+      reader.onerror = () => {
+        throw new Error("ອ່ານໄຟລ໌ຮູບບໍ່ສຳເລັດ");
+      };
 
+    } catch (err) {
+      console.error(err);
+      setStatus(analyzeStatus, "❌ " + err.message, "error");
+      btnAnalyze.disabled = false;
+    }
+  });
+}
 // ---------------- render results ----------------
 const resultsEmpty = document.getElementById("resultsEmpty");
 const resultsContent = document.getElementById("resultsContent");
