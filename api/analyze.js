@@ -1,14 +1,33 @@
 const nodeFs = require("node:fs");
-const { formidable } = require("formidable");
+const formidableModule = require("formidable");
 const { analyzeReceiptImage } = require("../lib/gemini");
 const db = require("../lib/db");
+
+// 🛡️ Safe helper ຈັດການ Formidable ທຸກ Version ອັດຕະໂນມັດ (ປ້ອງກັນ "formidable is not a function")
+function createForm(options) {
+  if (typeof formidableModule.formidable === "function") {
+    return formidableModule.formidable(options);
+  }
+  if (typeof formidableModule === "function") {
+    return formidableModule(options);
+  }
+  if (typeof formidableModule.IncomingForm === "function") {
+    return new formidableModule.IncomingForm(options);
+  }
+  if (typeof formidableModule.default === "function") {
+    return formidableModule.default(options);
+  }
+  throw new Error("ບໍ່ສາມາດຕັ້ງຄ່າ Formidable ໄດ້");
+}
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const form = formidable({ maxFileSize: 4 * 1024 * 1024 });
+    // ເອີ້ນໃຊ້ຜ່ານ createForm ຢ່າງປອດໄພ
+    const form = createForm({ maxFileSize: 4 * 1024 * 1024 });
     const [, files] = await form.parse(req);
+    
     const fileField = files.image;
     const file = Array.isArray(fileField) ? fileField[0] : fileField;
     if (!file) return res.status(400).json({ error: "ບໍ່ພົບຮູບພາບ (image) ໃນຄຳຮ້ອງຂໍ" });
@@ -22,6 +41,7 @@ module.exports = async (req, res) => {
     const threshold = Number(process.env.MATCH_THRESHOLD || 0.45);
     const items = Array.isArray(extracted.items) ? extracted.items : [];
     const itemsWithSuggestions = [];
+    
     for (const item of items) {
       const raw = await db.suggestProducts(item.name || item.raw_text, 5);
       const suggestions = raw
